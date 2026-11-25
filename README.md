@@ -2,7 +2,7 @@
 
 Chuleta interactiva de comandos para Hack The Box y laboratorios propios, organizada por situación.
 
-**Web:** https://xruxax.github.io/chuleta/
+**Web:** https://xaviharollovera.github.io/chuleta/
 
 ## Qué incluye
 
@@ -24,4 +24,4 @@ Solo para entornos autorizados: Hack The Box, TryHackMe, laboratorios propios o 
 
 ---
 
-Hecho por [Xavi Haro](https://github.com/xRUXAx).
+Hecho por [Xavi Haro](https://github.com/xaviharollovera).
